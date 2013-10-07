@@ -27,6 +27,9 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
  */
 class ProfilerController
 {
+    const TOKEN_LATEST_RESPONSE = '_latest';
+    const TOKEN_LATEST_POST     = '_latestPost';
+
     private $templateManager;
     private $generator;
     private $profiler;
@@ -88,6 +91,21 @@ class ProfilerController
 
         $panel = $request->query->get('panel', 'request');
         $page = $request->query->get('page', 'home');
+
+        if (self::TOKEN_LATEST_RESPONSE === $token) {
+            $tokens = $this->profiler->find(null, null, 1, null, null, null);
+            if (!empty($tokens[0]['token'])) {
+                $token = $tokens[0]['token'];
+            }
+        } elseif (self::TOKEN_LATEST_POST === $token) {
+            $tokens = $this->profiler->find(null, null, 10, null, null, null);
+            foreach ($tokens as $tokenArray) {
+                if ('POST' === $tokenArray['method']) {
+                    $token = $tokenArray['token'];
+                    break;
+                }
+            }
+        }
 
         if (!$profile = $this->profiler->loadProfile($token)) {
             return new Response($this->twig->render('@WebProfiler/Profiler/info.html.twig', array('about' => 'no_token', 'token' => $token)), 200, array('Content-Type' => 'text/html'));
